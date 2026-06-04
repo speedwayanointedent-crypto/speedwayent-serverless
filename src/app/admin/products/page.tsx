@@ -163,7 +163,12 @@ function AdminProductsPageInner() {
       const qs = params.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     }
-  }, [debouncedSearch, filterCategory, filterBrand, filterModel, router, pathname, searchParams]);
+    // Intentionally only depend on filter state — adding searchParams
+    // would re-fire on every URL change (e.g. clicking Next) and undo
+    // the navigation. router/pathname/searchParams are stable refs read
+    // fresh from the latest render's closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filterCategory, filterBrand, filterModel]);
 
   useEffect(() => {
     (async () => {
