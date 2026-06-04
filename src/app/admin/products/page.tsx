@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
-import { Plus, Search, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2, Upload, Download, Package, Eye } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2, Upload, Download, Package } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete, getApiErrorMessage } from "@/lib/api";
 import { ProductCardSkeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
@@ -525,18 +525,21 @@ export default function AdminProductsPage() {
                 <Card
                   key={p.id}
                   hover
-                  className="overflow-hidden animate-fade-in-up"
+                  padding="none"
+                  className="relative overflow-hidden animate-fade-in-up"
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
                   <Link
                     href={`/admin/products/${p.id}`}
-                    className="block aspect-[4/3] bg-muted relative overflow-hidden"
-                  >
+                    aria-label={`View ${p.name}`}
+                    className="absolute inset-0 z-0"
+                  />
+                  <div className="relative z-10 aspect-[4/3] bg-muted overflow-hidden pointer-events-none">
                     {imgSrc ? (
                       <img
                         src={imgSrc}
                         alt={p.name}
-                        className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                        className="h-full w-full object-cover transition-transform duration-300"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -551,18 +554,16 @@ export default function AdminProductsPage() {
                     <div className="absolute top-3 right-3">
                       {getStockBadge(p.quantity)}
                     </div>
-                  </Link>
-                  <div className="p-4">
+                  </div>
+                  <div className="relative z-10 p-4 pointer-events-none">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground truncate">
                           {p.categories?.name || "Uncategorized"}
                           {p.brands?.name && ` • ${p.brands.name}`}
                         </p>
-                        <h3 className="font-semibold text-sm line-clamp-2 mt-1">
-                          <Link href={`/admin/products/${p.id}`} className="hover:text-primary transition-colors">
-                            {p.name}
-                          </Link>
+                        <h3 className="font-semibold text-sm line-clamp-2 mt-1 group-hover:text-primary">
+                          {p.name}
                         </h3>
                       </div>
                     </div>
@@ -573,32 +574,25 @@ export default function AdminProductsPage() {
                       </div>
                       <Badge variant="muted">{p.status}</Badge>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => onOpenEdit(p)}
-                      >
-                        <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                      <Link
-                        href={`/admin/products/${p.id}`}
-                        aria-label="View product details"
-                        className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => onDelete(p.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                  </div>
+                  <div className="relative z-20 flex gap-2 px-4 pb-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => onOpenEdit(p)}
+                    >
+                      <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => onDelete(p.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </Card>
               );
