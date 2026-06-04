@@ -141,19 +141,18 @@ export default function AdminDashboardPage() {
 
   const load = React.useCallback(async () => {
     try {
-      const [summaryRes, productsRes, ordersRes, salesRes] = await Promise.all([
+      const [summaryRes, lowStockRes, ordersRes, salesRes] = await Promise.all([
         apiGet<SummaryResponse>("/reports/summary"),
-        apiGet<Product[]>("/products/all"),
+        apiGet<Product[]>("/products/low-stock?limit=20"),
         apiGet<Order[]>("/orders"),
         apiGet<Sale[]>("/sales"),
       ]);
 
       setSummary(summaryRes);
-      const products = Array.isArray(productsRes) ? productsRes : [];
       const orders = Array.isArray(ordersRes) ? ordersRes : [];
       const sales = Array.isArray(salesRes) ? salesRes : [];
 
-      const low = products.filter((p) => p.quantity <= 5).slice(0, 6);
+      const low = Array.isArray(lowStockRes) ? lowStockRes.slice(0, 6) : [];
       setLowStock(low);
 
       const recentOrdersList = [...orders]

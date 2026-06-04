@@ -40,7 +40,24 @@ export async function connectToMongo(): Promise<Db> {
   if (process.env.NODE_ENV === "development") {
     global._mongoDb = db;
   }
+  await ensureIndexes(db).catch(() => undefined);
   return db;
+}
+
+let indexesEnsured = false;
+async function ensureIndexes(database: Db) {
+  if (indexesEnsured) return;
+  indexesEnsured = true;
+  await Promise.all([
+    database.collection("products").createIndex({ is_deleted: 1, created_at: -1 }).catch(() => undefined),
+    database.collection("products").createIndex({ is_deleted: 1, category_id: 1, created_at: -1 }).catch(() => undefined),
+    database.collection("products").createIndex({ is_deleted: 1, brand_id: 1, created_at: -1 }).catch(() => undefined),
+    database.collection("products").createIndex({ is_deleted: 1, quantity: 1 }).catch(() => undefined),
+    database.collection("orders").createIndex({ user_id: 1, created_at: -1 }).catch(() => undefined),
+    database.collection("orders").createIndex({ created_at: -1 }).catch(() => undefined),
+    database.collection("audit_logs").createIndex({ created_at: -1 }).catch(() => undefined),
+    database.collection("sales").createIndex({ created_at: -1 }).catch(() => undefined),
+  ]).catch(() => undefined);
 }
 
 export function getDB(): Db {

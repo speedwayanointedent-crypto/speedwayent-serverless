@@ -56,6 +56,12 @@ export async function GET(req: NextRequest) {
       .aggregate(
         [
           { $match: match },
+          // Sort + limit BEFORE joins so only `limit` products get joined,
+          // not the whole 6k+ catalog. This avoids the 32MB in-memory sort
+          // limit and makes the pipeline O(limit) instead of O(catalog_size).
+          { $sort: { created_at: -1 } },
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
           {
             $lookup: {
               from: "categories",
@@ -92,9 +98,6 @@ export async function GET(req: NextRequest) {
             },
           },
           { $unwind: { path: "$year_data", preserveNullAndEmptyArrays: true } },
-          { $sort: { created_at: -1 } },
-          { $skip: (page - 1) * limit },
-          { $limit: limit },
         ],
         { allowDiskUse: true }
       )
