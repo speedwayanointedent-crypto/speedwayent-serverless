@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Plus, Search, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2, Upload, Download, Package } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete, getApiErrorMessage } from "@/lib/api";
 import { ProductCardSkeleton } from "@/components/ui/Skeleton";
@@ -26,6 +27,14 @@ type ProductsResponse = {
 };
 
 export default function AdminProductsPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 text-muted-foreground">Loading products…</div>}>
+      <AdminProductsPageInner />
+    </React.Suspense>
+  );
+}
+
+function AdminProductsPageInner() {
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -71,7 +80,34 @@ export default function AdminProductsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Option | null>(null);
 
-  const [page, setPage] = useState(1);
+  const [page, setPageState] = useState(1);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const raw = searchParams.get("page");
+    const parsed = parseInt(raw || "1", 10);
+    const next = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
+    setPageState((prev) => (prev === next ? prev : next));
+  }, [searchParams]);
+
+  const setPage = useCallback(
+    (next: number | ((prev: number) => number)) => {
+      const target =
+        typeof next === "function" ? next(page) : next;
+      const safe = Math.max(1, target);
+      const params = new URLSearchParams(searchParams.toString());
+      if (safe <= 1) {
+        params.delete("page");
+      } else {
+        params.set("page", String(safe));
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams, page]
+  );
   const PRODUCTS_PER_PAGE = 24;
 
   useEffect(() => {
@@ -121,8 +157,13 @@ export default function AdminProductsPage() {
   }, [loadProducts]);
 
   useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, filterCategory, filterBrand, filterModel]);
+    if (searchParams.get("page") && searchParams.get("page") !== "1") {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("page");
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    }
+  }, [debouncedSearch, filterCategory, filterBrand, filterModel, router, pathname, searchParams]);
 
   useEffect(() => {
     (async () => {

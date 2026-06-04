@@ -308,7 +308,7 @@ function AdminProductDetailInner({ id }: { id: string }) {
     try {
       await apiDelete(`/api/products/${product.id}`);
       push("Product deleted", "success");
-      router.push("/admin/products");
+      router.back();
     } catch (err) {
       push(getApiErrorMessage(err), "error");
     } finally {
@@ -404,12 +404,14 @@ function AdminProductDetailInner({ id }: { id: string }) {
     <div className="space-y-6 text-foreground">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Link
-            href="/admin/products"
+          <button
+            type="button"
+            onClick={() => router.back()}
+            aria-label="Back to products"
             className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-border hover:bg-muted transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-          </Link>
+          </button>
           <div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Link href="/admin/products" className="hover:text-foreground">
