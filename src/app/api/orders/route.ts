@@ -4,7 +4,11 @@ import { collections, normalizeOrders, toObjectId } from "@/lib/mongodb";
 import { withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireAuth, requireRole } from "@/lib/server-auth";
 import { logAudit } from "@/lib/audit";
-import { sendEmail, ADMIN_EMAIL } from "@/lib/email-service";
+import {
+  sendOrderConfirmation,
+  sendAdminOrderNotification,
+  ADMIN_EMAIL,
+} from "@/lib/email-service";
 
 export const dynamic = "force-dynamic";
 
@@ -162,19 +166,15 @@ export async function POST(req: NextRequest) {
       { projection: { email: 1 } }
     );
     if (userProfile?.email) {
-      sendEmail({
-        to: userProfile.email,
-        subject: `Order #${orderId.toString()} confirmed`,
-        html: `<p>Your order totaling GHS ${computedTotal} has been received.</p>`,
-      }).catch((err) => console.error("[email] order confirmation failed", err));
+      sendOrderConfirmation(userProfile.email, orderId.toString(), computedTotal, items.map((it) => ({
+        name: undefined,
+        quantity: it.quantity,
+        price: it.price,
+      }))).catch((err) => console.error("[email] order confirmation failed", err));
     }
-    if (ADMIN_EMAIL) {
-      sendEmail({
-        to: ADMIN_EMAIL,
-        subject: `New order #${orderId.toString()}`,
-        html: `<p>A new order has been placed totaling GHS ${computedTotal}.</p>`,
-      }).catch((err) => console.error("[email] admin notification failed", err));
-    }
+    sendAdminOrderNotification(orderId.toString(), computedTotal, userProfile?.email || null).catch((err) =>
+      console.error("[email] admin notification failed", err)
+    );
 
     if (appliedCoupon) {
       await collections.couponRedemptions().insertOne({

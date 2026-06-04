@@ -2,7 +2,7 @@ import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { collections, serializeDoc } from "@/lib/mongodb";
 import { withErrorHandling, jsonResponse } from "@/lib/errors";
-import { sendEmail } from "@/lib/email-service";
+import { sendContactAdminEmail, sendContactAutoReply } from "@/lib/email-service";
 
 export const dynamic = "force-dynamic";
 
@@ -47,27 +47,18 @@ export async function POST(req: NextRequest) {
     const inserted = await collections.contactMessages().findOne({ _id: insert.insertedId });
 
     if (recipient) {
-      const subjectLine = data.subject
-        ? `[Contact] ${data.subject} — from ${data.name}`
-        : `[Contact] New message from ${data.name}`;
-      const html = `
-        <h2>New contact form submission</h2>
-        <p><strong>From:</strong> ${escapeHtml(data.name)} &lt;${escapeHtml(data.email)}&gt;</p>
-        ${data.phone ? `<p><strong>Phone:</strong> ${escapeHtml(data.phone)}</p>` : ""}
-        ${data.subject ? `<p><strong>Subject:</strong> ${escapeHtml(data.subject)}</p>` : ""}
-        <p><strong>Message:</strong></p>
-        <pre style="white-space:pre-wrap;font-family:inherit;background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0">${escapeHtml(data.message)}</pre>
-        <hr/>
-        <p style="color:#64748b;font-size:12px">Sent to ${escapeHtml(businessName)} • ${new Date().toUTCString()} • IP ${escapeHtml(ip)}</p>
-      `;
-      sendEmail({ to: recipient, subject: subjectLine, html }).catch((err) =>
-        console.error("[email] contact admin email failed", err)
-      );
+      sendContactAdminEmail({
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        subject: data.subject,
+        message: data.message,
+      }).catch((err) => console.error("[email] contact admin email failed", err));
 
-      sendEmail({
+      sendContactAutoReply({
         to: data.email,
-        subject: `We received your message — ${businessName}`,
-        html: `<p>Hi ${escapeHtml(data.name)},</p><p>Thanks for reaching out to ${escapeHtml(businessName)}. We typically reply within 24 hours.</p><p>Your message:</p><blockquote style="border-left:3px solid #cbd5e1;padding-left:12px;color:#475569">${escapeHtml(data.message)}</blockquote>`,
+        name: data.name,
+        message: data.message,
       }).catch((err) => console.error("[email] contact auto-reply failed", err));
     }
 
