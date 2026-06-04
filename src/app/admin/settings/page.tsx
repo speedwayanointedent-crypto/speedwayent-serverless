@@ -14,36 +14,117 @@ import {
   Twitter,
   Linkedin,
   Globe,
+  Clock,
+  MapPinned,
+  Sparkles,
 } from "lucide-react";
 import { apiGet, apiPut, getApiErrorMessage } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+
+type BusinessHours = {
+  mon_fri: string;
+  saturday: string;
+  sunday: string;
+};
 
 type SettingsForm = {
   business_name: string;
   support_email: string;
   support_phone: string;
   address: string;
+  city: string;
   facebook_url: string;
   instagram_url: string;
   x_url: string;
   tiktok_url: string;
   linkedin_url: string;
   whatsapp_url: string;
+  map_embed_url: string;
+  hero_subtitle: string;
+  response_promise: string;
+  business_hours: BusinessHours;
 };
 
+const EMPTY_FORM: SettingsForm = {
+  business_name: "",
+  support_email: "",
+  support_phone: "",
+  address: "",
+  city: "",
+  facebook_url: "",
+  instagram_url: "",
+  x_url: "",
+  tiktok_url: "",
+  linkedin_url: "",
+  whatsapp_url: "",
+  map_embed_url: "",
+  hero_subtitle: "",
+  response_promise: "",
+  business_hours: { mon_fri: "", saturday: "", sunday: "" },
+};
+
+function Field({
+  icon: Icon,
+  placeholder,
+  value,
+  onChange,
+  disabled,
+  type = "text",
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  type?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+      <Icon className="h-4 w-4 shrink-0" />
+      <input
+        type={type}
+        placeholder={placeholder}
+        className="w-full bg-transparent outline-none"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      />
+    </div>
+  );
+}
+
+function TextArea({
+  icon: Icon,
+  placeholder,
+  value,
+  onChange,
+  disabled,
+  rows = 2,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  rows?: number;
+}) {
+  return (
+    <div className="flex gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+      <Icon className="h-4 w-4 mt-1.5 shrink-0" />
+      <textarea
+        placeholder={placeholder}
+        className="w-full bg-transparent outline-none resize-y min-h-[60px]"
+        value={value}
+        rows={rows}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      />
+    </div>
+  );
+}
+
 export default function AdminSettingsPage() {
-  const [form, setForm] = React.useState<SettingsForm>({
-    business_name: "",
-    support_email: "",
-    support_phone: "",
-    address: "",
-    facebook_url: "",
-    instagram_url: "",
-    x_url: "",
-    tiktok_url: "",
-    linkedin_url: "",
-    whatsapp_url: "",
-  });
+  const [form, setForm] = React.useState<SettingsForm>(EMPTY_FORM);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const { push } = useToast();
@@ -54,23 +135,29 @@ export default function AdminSettingsPage() {
       try {
         const res = await apiGet<any>("/settings");
         if (!isMounted) return;
-        setForm((prev) => ({
-          ...prev,
+        setForm({
           business_name: res?.business_name || "",
           support_email: res?.support_email || "",
           support_phone: res?.support_phone || "",
           address: res?.address || "",
+          city: res?.city || "",
           facebook_url: res?.facebook_url || "",
           instagram_url: res?.instagram_url || "",
           x_url: res?.x_url || "",
           tiktok_url: res?.tiktok_url || "",
           linkedin_url: res?.linkedin_url || "",
           whatsapp_url: res?.whatsapp_url || "",
-        }));
+          map_embed_url: res?.map_embed_url || "",
+          hero_subtitle: res?.hero_subtitle || "",
+          response_promise: res?.response_promise || "",
+          business_hours: {
+            mon_fri: res?.business_hours?.mon_fri || "",
+            saturday: res?.business_hours?.saturday || "",
+            sunday: res?.business_hours?.sunday || "",
+          },
+        });
       } catch (err) {
-        if (isMounted) {
-          push(getApiErrorMessage(err), "error");
-        }
+        if (isMounted) push(getApiErrorMessage(err), "error");
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -81,8 +168,15 @@ export default function AdminSettingsPage() {
     };
   }, [push]);
 
-  const updateField = (field: keyof SettingsForm) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [field]: event.target.value }));
+  const updateField = (field: keyof SettingsForm) => (v: string) => {
+    setForm((prev) => ({ ...prev, [field]: v }));
+  };
+
+  const updateHours = (field: keyof BusinessHours) => (v: string) => {
+    setForm((prev) => ({
+      ...prev,
+      business_hours: { ...prev.business_hours, [field]: v },
+    }));
   };
 
   const saveSettings = async () => {
@@ -92,7 +186,25 @@ export default function AdminSettingsPage() {
       const res = await apiPut<any>("/settings", form);
       setForm((prev) => ({
         ...prev,
-        ...res,
+        business_name: res?.business_name ?? prev.business_name,
+        support_email: res?.support_email ?? prev.support_email,
+        support_phone: res?.support_phone ?? prev.support_phone,
+        address: res?.address ?? prev.address,
+        city: res?.city ?? prev.city,
+        facebook_url: res?.facebook_url ?? prev.facebook_url,
+        instagram_url: res?.instagram_url ?? prev.instagram_url,
+        x_url: res?.x_url ?? prev.x_url,
+        tiktok_url: res?.tiktok_url ?? prev.tiktok_url,
+        linkedin_url: res?.linkedin_url ?? prev.linkedin_url,
+        whatsapp_url: res?.whatsapp_url ?? prev.whatsapp_url,
+        map_embed_url: res?.map_embed_url ?? prev.map_embed_url,
+        hero_subtitle: res?.hero_subtitle ?? prev.hero_subtitle,
+        response_promise: res?.response_promise ?? prev.response_promise,
+        business_hours: {
+          mon_fri: res?.business_hours?.mon_fri ?? prev.business_hours.mon_fri,
+          saturday: res?.business_hours?.saturday ?? prev.business_hours.saturday,
+          sunday: res?.business_hours?.sunday ?? prev.business_hours.sunday,
+        },
       }));
       push("Settings saved", "success");
     } catch (err) {
@@ -106,129 +218,185 @@ export default function AdminSettingsPage() {
     <div className="space-y-6 text-foreground">
       <PageHeader
         title="Settings"
-        subtitle="Configure business details and notifications."
+        subtitle="Configure business details, social links, business hours, and contact page content."
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.5fr)]">
-        <div className="card p-6">
-          <h2 className="text-sm font-semibold text-foreground">Business profile</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Building2 className="h-4 w-4" />
-              <input
+        <div className="space-y-4">
+          <div className="card p-6">
+            <h2 className="text-sm font-semibold text-foreground">Business profile</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Shown on the public contact page, navbar, and invoice emails.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <Field
+                icon={Building2}
                 placeholder="Business name"
-                className="w-full bg-transparent outline-none"
                 value={form.business_name}
                 onChange={updateField("business_name")}
                 disabled={loading || saving}
               />
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Mail className="h-4 w-4" />
-              <input
-                placeholder="Support email"
-                className="w-full bg-transparent outline-none"
+              <Field
+                icon={Mail}
+                placeholder="Support email (e.g. info@speedway.com)"
                 value={form.support_email}
                 onChange={updateField("support_email")}
                 disabled={loading || saving}
+                type="email"
               />
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Phone className="h-4 w-4" />
-              <input
-                placeholder="Support phone"
-                className="w-full bg-transparent outline-none"
+              <Field
+                icon={Phone}
+                placeholder="Support phone (e.g. +233 50 000 0000)"
                 value={form.support_phone}
                 onChange={updateField("support_phone")}
                 disabled={loading || saving}
+                type="tel"
               />
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              <input
-                placeholder="Business address"
-                className="w-full bg-transparent outline-none"
+              <Field
+                icon={MapPin}
+                placeholder="Street address (e.g. Abossey-Okai, Main Street)"
                 value={form.address}
                 onChange={updateField("address")}
                 disabled={loading || saving}
               />
+              <Field
+                icon={MapPinned}
+                placeholder="City / Region (e.g. Accra, Ghana)"
+                value={form.city}
+                onChange={updateField("city")}
+                disabled={loading || saving}
+              />
             </div>
           </div>
-          <h3 className="mt-6 text-sm font-semibold text-foreground">Social media</h3>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Facebook className="h-4 w-4" />
-              <input
+
+          <div className="card p-6">
+            <h2 className="text-sm font-semibold text-foreground">Business hours</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Displayed in the contact page sidebar.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <Field
+                icon={Clock}
+                placeholder="Mon - Fri (e.g. 8:00 AM - 6:00 PM)"
+                value={form.business_hours.mon_fri}
+                onChange={updateHours("mon_fri")}
+                disabled={loading || saving}
+              />
+              <Field
+                icon={Clock}
+                placeholder="Saturday (e.g. 9:00 AM - 4:00 PM)"
+                value={form.business_hours.saturday}
+                onChange={updateHours("saturday")}
+                disabled={loading || saving}
+              />
+              <Field
+                icon={Clock}
+                placeholder="Sunday (e.g. Closed)"
+                value={form.business_hours.sunday}
+                onChange={updateHours("sunday")}
+                disabled={loading || saving}
+              />
+            </div>
+          </div>
+
+          <div className="card p-6">
+            <h2 className="text-sm font-semibold text-foreground">Contact page messaging</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Optional custom copy shown on the public contact page hero & sidebar.
+            </p>
+            <div className="mt-4 grid gap-3">
+              <TextArea
+                icon={Sparkles}
+                placeholder="Hero subtitle (e.g. Have questions about parts, fitment, or orders?)"
+                value={form.hero_subtitle}
+                onChange={updateField("hero_subtitle")}
+                disabled={loading || saving}
+                rows={2}
+              />
+              <TextArea
+                icon={Sparkles}
+                placeholder="Response promise (e.g. We typically reply within 24 hours)"
+                value={form.response_promise}
+                onChange={updateField("response_promise")}
+                disabled={loading || saving}
+                rows={2}
+              />
+              <Field
+                icon={MapPinned}
+                placeholder="Google Maps embed URL (Share → Embed a map → copy the src= URL)"
+                value={form.map_embed_url}
+                onChange={updateField("map_embed_url")}
+                disabled={loading || saving}
+                type="url"
+              />
+            </div>
+          </div>
+
+          <div className="card p-6">
+            <h2 className="text-sm font-semibold text-foreground">Social media</h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <Field
+                icon={Facebook}
                 placeholder="Facebook URL"
-                className="w-full bg-transparent outline-none"
                 value={form.facebook_url}
                 onChange={updateField("facebook_url")}
                 disabled={loading || saving}
+                type="url"
               />
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Instagram className="h-4 w-4" />
-              <input
+              <Field
+                icon={Instagram}
                 placeholder="Instagram URL"
-                className="w-full bg-transparent outline-none"
                 value={form.instagram_url}
                 onChange={updateField("instagram_url")}
                 disabled={loading || saving}
+                type="url"
               />
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Twitter className="h-4 w-4" />
-              <input
+              <Field
+                icon={Twitter}
                 placeholder="X (Twitter) URL"
-                className="w-full bg-transparent outline-none"
                 value={form.x_url}
                 onChange={updateField("x_url")}
                 disabled={loading || saving}
+                type="url"
               />
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Linkedin className="h-4 w-4" />
-              <input
+              <Field
+                icon={Linkedin}
                 placeholder="LinkedIn URL"
-                className="w-full bg-transparent outline-none"
                 value={form.linkedin_url}
                 onChange={updateField("linkedin_url")}
                 disabled={loading || saving}
+                type="url"
               />
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Globe className="h-4 w-4" />
-              <input
+              <Field
+                icon={Globe}
                 placeholder="TikTok URL"
-                className="w-full bg-transparent outline-none"
                 value={form.tiktok_url}
                 onChange={updateField("tiktok_url")}
                 disabled={loading || saving}
+                type="url"
               />
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              <Globe className="h-4 w-4" />
-              <input
-                placeholder="WhatsApp URL"
-                className="w-full bg-transparent outline-none"
+              <Field
+                icon={Globe}
+                placeholder="WhatsApp link (e.g. https://wa.me/233240000000)"
                 value={form.whatsapp_url}
                 onChange={updateField("whatsapp_url")}
                 disabled={loading || saving}
+                type="url"
               />
             </div>
+            <StickyActionBar className="mt-6">
+              <button
+                className="btn-primary h-10 text-sm"
+                type="button"
+                onClick={saveSettings}
+                disabled={saving}
+                aria-busy={saving}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? "Saving..." : "Save changes"}
+              </button>
+            </StickyActionBar>
           </div>
-          <StickyActionBar className="mt-6">
-            <button
-              className="btn-primary h-10 text-sm"
-              type="button"
-              onClick={saveSettings}
-              disabled={saving}
-              aria-busy={saving}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {saving ? "Saving..." : "Save changes"}
-            </button>
-          </StickyActionBar>
         </div>
 
         <div className="space-y-4">
@@ -251,8 +419,14 @@ export default function AdminSettingsPage() {
             </div>
           </div>
           <div className="card p-5 text-sm text-muted-foreground">
-            Integrations and API keys can be configured in your environment
-            variables.
+            Integrations and API keys can be configured in your environment variables.
+            <div className="mt-3 space-y-1 text-xs">
+              <div>MONGODB_URI · MONGODB_DB</div>
+              <div>JWT_SECRET</div>
+              <div>CLOUDINARY_CLOUD_NAME / API_KEY / API_SECRET</div>
+              <div>GMAIL_USER · GOOGLE_CLIENT_ID / CLIENT_SECRET / REFRESH_TOKEN</div>
+              <div>OWNER_EMAIL</div>
+            </div>
           </div>
         </div>
       </div>

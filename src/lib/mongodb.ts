@@ -111,6 +111,7 @@ export const collections = {
   auditLogs: () => getCollection("audit_logs"),
   settings: () => getCollection("settings"),
   sales: () => getCollection("sales"),
+  contactMessages: () => getCollection("contact_messages"),
 };
 
 export function serializeDoc<T extends Record<string, any>>(doc: T | null | undefined): (T & { id: string }) | null {
