@@ -10,41 +10,44 @@ export async function GET(req: NextRequest) {
     await requireRole(req, ["admin", "manager", "staff"]);
     const returns = await collections
       .orderReturns()
-      .aggregate([
-        {
-          $lookup: {
-            from: "orders",
-            localField: "order_id",
-            foreignField: "_id",
-            as: "order_data",
+      .aggregate(
+        [
+          {
+            $lookup: {
+              from: "orders",
+              localField: "order_id",
+              foreignField: "_id",
+              as: "order_data",
+            },
           },
-        },
-        {
-          $lookup: {
-            from: "users",
-            localField: "user_id",
-            foreignField: "_id",
-            as: "user_data",
+          {
+            $lookup: {
+              from: "users",
+              localField: "user_id",
+              foreignField: "_id",
+              as: "user_data",
+            },
           },
-        },
-        { $unwind: { path: "$order_data", preserveNullAndEmptyArrays: true } },
-        { $unwind: { path: "$user_data", preserveNullAndEmptyArrays: true } },
-        {
-          $project: {
-            _id: 1,
-            order_id: 1,
-            user_id: 1,
-            status: 1,
-            reason: 1,
-            amount: 1,
-            created_at: 1,
-            updated_at: 1,
-            order_data: { _id: 1, total: 1, status: 1 },
-            user_data: { full_name: 1, email: 1 },
+          { $unwind: { path: "$order_data", preserveNullAndEmptyArrays: true } },
+          { $unwind: { path: "$user_data", preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              _id: 1,
+              order_id: 1,
+              user_id: 1,
+              status: 1,
+              reason: 1,
+              amount: 1,
+              created_at: 1,
+              updated_at: 1,
+              order_data: { _id: 1, total: 1, status: 1 },
+              user_data: { full_name: 1, email: 1 },
+            },
           },
-        },
-        { $sort: { created_at: -1 } },
-      ])
+          { $sort: { created_at: -1 } },
+        ],
+        { allowDiskUse: true }
+      )
       .toArray();
     const normalized = returns.map((r: any) => {
       const { _id, order_data, user_data, ...rest } = r;

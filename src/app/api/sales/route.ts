@@ -24,31 +24,34 @@ export async function GET(req: NextRequest) {
     await requireRole(req, ["admin", "manager", "staff"]);
     const sales = await collections
       .sales()
-      .aggregate([
-        {
-          $lookup: {
-            from: "products",
-            localField: "product_id",
-            foreignField: "_id",
-            as: "product_data",
+      .aggregate(
+        [
+          {
+            $lookup: {
+              from: "products",
+              localField: "product_id",
+              foreignField: "_id",
+              as: "product_data",
+            },
           },
-        },
-        { $unwind: { path: "$product_data", preserveNullAndEmptyArrays: true } },
-        {
-          $project: {
-            _id: 1,
-            product_id: 1,
-            product_name: 1,
-            quantity: 1,
-            price: 1,
-            total: 1,
-            note: 1,
-            created_at: 1,
-            product_data: { name: 1 },
+          { $unwind: { path: "$product_data", preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              _id: 1,
+              product_id: 1,
+              product_name: 1,
+              quantity: 1,
+              price: 1,
+              total: 1,
+              note: 1,
+              created_at: 1,
+              product_data: { name: 1 },
+            },
           },
-        },
-        { $sort: { created_at: -1 } },
-      ])
+          { $sort: { created_at: -1 } },
+        ],
+        { allowDiskUse: true }
+      )
       .toArray();
     return jsonResponse(normalizeSales(sales as any));
   });

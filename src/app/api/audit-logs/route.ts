@@ -24,37 +24,40 @@ export async function GET(req: NextRequest) {
 
     const logs = await collections
       .auditLogs()
-      .aggregate([
-        ...(conditions.length ? [{ $match: match }] : []),
-        {
-          $lookup: {
-            from: "users",
-            localField: "actor_id",
-            foreignField: "_id",
-            as: "user_data",
+      .aggregate(
+        [
+          ...(conditions.length ? [{ $match: match }] : []),
+          {
+            $lookup: {
+              from: "users",
+              localField: "actor_id",
+              foreignField: "_id",
+              as: "user_data",
+            },
           },
-        },
-        { $unwind: { path: "$user_data", preserveNullAndEmptyArrays: true } },
-        {
-          $project: {
-            _id: 1,
-            actor_id: 1,
-            user_id: 1,
-            user_email: 1,
-            action: 1,
-            entity: 1,
-            resource: 1,
-            entity_id: 1,
-            resource_id: 1,
-            metadata: 1,
-            details: 1,
-            created_at: 1,
-            user_data: { full_name: 1, email: 1 },
+          { $unwind: { path: "$user_data", preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              _id: 1,
+              actor_id: 1,
+              user_id: 1,
+              user_email: 1,
+              action: 1,
+              entity: 1,
+              resource: 1,
+              entity_id: 1,
+              resource_id: 1,
+              metadata: 1,
+              details: 1,
+              created_at: 1,
+              user_data: { full_name: 1, email: 1 },
+            },
           },
-        },
-        { $sort: { created_at: -1 } },
-        { $limit: limit },
-      ])
+          { $sort: { created_at: -1 } },
+          { $limit: limit },
+        ],
+        { allowDiskUse: true }
+      )
       .toArray();
     return jsonResponse(normalizeAuditLogs(logs as any));
   });

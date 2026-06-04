@@ -16,28 +16,31 @@ export async function GET(req: NextRequest) {
     const [orders, countResult] = await Promise.all([
       collections
         .orders()
-        .aggregate([
-          { $match: { user_id: user.id } },
-          {
-            $lookup: {
-              from: "order_items",
-              localField: "_id",
-              foreignField: "order_id",
-              as: "order_items",
+        .aggregate(
+          [
+            { $match: { user_id: user.id } },
+            {
+              $lookup: {
+                from: "order_items",
+                localField: "_id",
+                foreignField: "order_id",
+                as: "order_items",
+              },
             },
-          },
-          {
-            $lookup: {
-              from: "order_status_events",
-              localField: "_id",
-              foreignField: "order_id",
-              as: "order_status_events",
+            {
+              $lookup: {
+                from: "order_status_events",
+                localField: "_id",
+                foreignField: "order_id",
+                as: "order_status_events",
+              },
             },
-          },
-          { $sort: { created_at: -1 } },
-          { $skip: offset },
-          { $limit: limitNum },
-        ])
+            { $sort: { created_at: -1 } },
+            { $skip: offset },
+            { $limit: limitNum },
+          ],
+          { allowDiskUse: true }
+        )
         .toArray(),
       collections.orders().countDocuments({ user_id: user.id }),
     ]);

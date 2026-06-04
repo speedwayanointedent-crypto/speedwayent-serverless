@@ -53,48 +53,51 @@ export async function GET(req: NextRequest) {
 
     const data = await collections
       .products()
-      .aggregate([
-        { $match: match },
-        {
-          $lookup: {
-            from: "categories",
-            localField: "category_id",
-            foreignField: "_id",
-            as: "category_data",
+      .aggregate(
+        [
+          { $match: match },
+          {
+            $lookup: {
+              from: "categories",
+              localField: "category_id",
+              foreignField: "_id",
+              as: "category_data",
+            },
           },
-        },
-        { $unwind: { path: "$category_data", preserveNullAndEmptyArrays: true } },
-        {
-          $lookup: {
-            from: "brands",
-            localField: "brand_id",
-            foreignField: "_id",
-            as: "brand_data",
+          { $unwind: { path: "$category_data", preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: "brands",
+              localField: "brand_id",
+              foreignField: "_id",
+              as: "brand_data",
+            },
           },
-        },
-        { $unwind: { path: "$brand_data", preserveNullAndEmptyArrays: true } },
-        {
-          $lookup: {
-            from: "models",
-            localField: "model_id",
-            foreignField: "_id",
-            as: "model_data",
+          { $unwind: { path: "$brand_data", preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: "models",
+              localField: "model_id",
+              foreignField: "_id",
+              as: "model_data",
+            },
           },
-        },
-        { $unwind: { path: "$model_data", preserveNullAndEmptyArrays: true } },
-        {
-          $lookup: {
-            from: "years",
-            localField: "year_id",
-            foreignField: "_id",
-            as: "year_data",
+          { $unwind: { path: "$model_data", preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: "years",
+              localField: "year_id",
+              foreignField: "_id",
+              as: "year_data",
+            },
           },
-        },
-        { $unwind: { path: "$year_data", preserveNullAndEmptyArrays: true } },
-        { $sort: { created_at: -1 } },
-        { $skip: (page - 1) * limit },
-        { $limit: limit },
-      ])
+          { $unwind: { path: "$year_data", preserveNullAndEmptyArrays: true } },
+          { $sort: { created_at: -1 } },
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
+        ],
+        { allowDiskUse: true }
+      )
       .toArray();
 
     const filtered = data.map((p: any) => ({

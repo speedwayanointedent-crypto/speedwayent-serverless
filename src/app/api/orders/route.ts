@@ -182,25 +182,28 @@ export async function GET(req: NextRequest) {
     const [orders, countResult] = await Promise.all([
       collections
         .orders()
-        .aggregate([
-          {
-            $lookup: {
-              from: "users",
-              localField: "user_id",
-              foreignField: "_id",
-              as: "user_data",
+        .aggregate(
+          [
+            {
+              $lookup: {
+                from: "users",
+                localField: "user_id",
+                foreignField: "_id",
+                as: "user_data",
+              },
             },
-          },
-          { $unwind: { path: "$user_data", preserveNullAndEmptyArrays: true } },
-          {
-            $project: {
-              user_data: { full_name: 1, email: 1 },
+            { $unwind: { path: "$user_data", preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                user_data: { full_name: 1, email: 1 },
+              },
             },
-          },
-          { $sort: { created_at: -1 } },
-          { $skip: offset },
-          { $limit: limitNum },
-        ])
+            { $sort: { created_at: -1 } },
+            { $skip: offset },
+            { $limit: limitNum },
+          ],
+          { allowDiskUse: true }
+        )
         .toArray(),
       collections.orders().countDocuments({}),
     ]);
