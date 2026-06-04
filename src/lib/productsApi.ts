@@ -40,26 +40,46 @@ type FetchAllParams = {
 };
 
 export async function fetchAllProducts(params: FetchAllParams = {}): Promise<Normalized[]> {
-  try {
-    const { signal, ...rest } = params;
-    const res: any = await apiGet("/api/products/all", { params: rest, signal });
-    if (Array.isArray(res)) return res.map(normalize);
-  } catch {
-    // fall back to paginated
-  }
+  // Skip /api/products/all (it returns a single huge response that times out or
+  // hits the 4.5MB Vercel body limit on large catalogs). Paginate the regular
+  // /api/products endpoint in parallel instead. Each page response stays small
+  // (limit=200 with joined data is well under 1MB), so 6k products come back
+  // in ~1-2s instead of 30s sequential.
+  const { signal, ...rest } = params;
+  const queryParams: Record<string, string | number | boolean | null | undefined> = rest;
+  const PAGE_SIZE = 200;
+  const MAX_PAGES = 100; // safety cap = 20,000 products
+  const PARALLELISM = 10;
 
-  const all: Normalized[] = [];
-  const limit = 100;
-  let page = 1;
-  for (let i = 0; i < 200; i++) {
-    const { signal, ...rest } = params;
-    const res: any = await apiGet("/api/products", { params: { ...rest, page, limit }, signal });
-    const data: any[] = Array.isArray(res) ? res : res?.data || [];
-    if (!data.length) break;
-    all.push(...data.map(normalize));
-    const totalPages = res?.pagination?.totalPages || 1;
-    if (page >= totalPages) break;
-    page++;
+  const first = await apiGet("/api/products", {
+    params: { ...queryParams, page: 1, limit: PAGE_SIZE },
+    ...(signal ? { signal } : {}),
+  } as any).catch(() => null);
+  if (!first) return [];
+
+  const firstData: any[] = Array.isArray(first) ? first : first?.data || [];
+  const totalPages: number = (first as any)?.pagination?.totalPages || 1;
+  if (totalPages <= 1) return firstData.map(normalize);
+
+  const pagesToFetch: number[] = [];
+  for (let p = 2; p <= Math.min(totalPages, MAX_PAGES); p++) pagesToFetch.push(p);
+
+  const all: Normalized[] = [...firstData.map(normalize)];
+  for (let i = 0; i < pagesToFetch.length; i += PARALLELISM) {
+    const batch = pagesToFetch.slice(i, i + PARALLELISM);
+    const results = await Promise.all(
+      batch.map((page) =>
+        apiGet("/api/products", {
+          params: { ...queryParams, page, limit: PAGE_SIZE },
+          ...(signal ? { signal } : {}),
+        } as any)
+          .then((r: any) => (Array.isArray(r) ? r : r?.data || []))
+          .catch(() => [])
+      )
+    );
+    for (const data of results) {
+      for (const p of data) all.push(normalize(p));
+    }
   }
   return all;
 }
