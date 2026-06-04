@@ -53,13 +53,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isStaff, clearAuth } = useAuth();
+  const { isAuthenticated, isStaff, clearAuth, hydrated } = useAuth();
 
   useEffect(() => {
+    if (!hydrated) return;
     if (!isAuthenticated || !isStaff) {
       router.replace("/login");
     }
-  }, [isAuthenticated, isStaff, router]);
+  }, [hydrated, isAuthenticated, isStaff, router]);
 
   const breadcrumbs = useMemo(() => {
     const segments = pathname?.split("/").filter(Boolean) || [];
