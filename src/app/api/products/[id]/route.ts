@@ -7,26 +7,6 @@ import { productUpdateSchema } from "@/lib/schemas/product";
 
 export const dynamic = "force-dynamic";
 
-function transformProductForFrontend(p: any) {
-  return {
-    id: p._id?.toString() || p.id,
-    _id: undefined,
-    name: p.name,
-    category_id: p.category_id?.toString(),
-    brand_id: p.brand_id?.toString(),
-    model_id: p.model_id?.toString(),
-    year_id: p.year_id?.toString(),
-    price: p.price,
-    cost_price: p.cost_price,
-    quantity: p.quantity,
-    description: p.description,
-    image_url: p.image_url,
-    gallery: p.gallery,
-    status: p.status,
-    created_at: p.created_at,
-  };
-}
-
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withErrorHandling(async () => {
     const { id } = await params;
@@ -48,15 +28,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     if (!product || product.length === 0) throw ApiError.notFound("Product not found");
     const p = product[0];
-    return jsonResponse(
-      transformProductForFrontend({
-        ...p,
-        categories: { name: p.category_data?.name },
-        brands: { name: p.brand_data?.name },
-        models: { name: p.model_data?.name, image_url: p.model_data?.image_url, gallery: p.model_data?.gallery },
-        years: { id: p.year_data?._id?.toString(), label: p.year_data?.label },
-      })
-    );
+    const { _id, category_data, brand_data, model_data, year_data, ...rest } = p;
+    return jsonResponse({
+      id: _id?.toString(),
+      _id: undefined,
+      ...rest,
+      category_id: rest.category_id?.toString(),
+      brand_id: rest.brand_id?.toString(),
+      model_id: rest.model_id?.toString(),
+      year_id: rest.year_id?.toString(),
+      categories: category_data ? { name: category_data.name } : undefined,
+      brands: brand_data ? { name: brand_data.name } : undefined,
+      models: model_data
+        ? { name: model_data.name, image_url: model_data.image_url, gallery: model_data.gallery }
+        : undefined,
+      years: year_data ? { id: year_data._id?.toString(), label: year_data.label } : undefined,
+    });
   });
 }
 

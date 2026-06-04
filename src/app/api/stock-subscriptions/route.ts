@@ -30,18 +30,28 @@ export async function GET(req: NextRequest) {
           $project: {
             _id: 1,
             created_at: 1,
-            products: {
-              id: "$product_data._id",
-              name: "$product_data.name",
-              image_url: "$product_data.image_url",
-              quantity: "$product_data.quantity",
-            },
+            product_data: { _id: 1, name: 1, image_url: 1, quantity: 1 },
           },
         },
         { $sort: { created_at: -1 } },
       ])
       .toArray();
-    return jsonResponse(subscriptions);
+    const normalized = subscriptions.map((s: any) => {
+      const { _id, product_data, ...rest } = s;
+      return {
+        id: _id?.toString() ?? "",
+        ...rest,
+        products: product_data
+          ? {
+              id: product_data._id?.toString(),
+              name: product_data.name,
+              image_url: product_data.image_url,
+              quantity: product_data.quantity,
+            }
+          : undefined,
+      };
+    });
+    return jsonResponse(normalized);
   });
 }
 
@@ -74,19 +84,26 @@ export async function POST(req: NextRequest) {
           $project: {
             _id: 1,
             created_at: 1,
-            products: {
-              id: "$product_data._id",
-              name: "$product_data.name",
-              image_url: "$product_data.image_url",
-              quantity: "$product_data.quantity",
-            },
+            product_data: { _id: 1, name: 1, image_url: 1, quantity: 1 },
           },
         },
       ])
       .toArray();
 
-    return jsonResponse(subscription[0] || { id: result.insertedId.toString() }, {
-      status: 201,
-    });
+    const subDoc = subscription[0] || {};
+    const { _id, product_data, ...rest } = subDoc as any;
+    const normalized = {
+      id: _id?.toString() ?? result.insertedId.toString(),
+      ...rest,
+      products: product_data
+        ? {
+            id: product_data._id?.toString(),
+            name: product_data.name,
+            image_url: product_data.image_url,
+            quantity: product_data.quantity,
+          }
+        : undefined,
+    };
+    return jsonResponse(normalized, { status: 201 });
   });
 }

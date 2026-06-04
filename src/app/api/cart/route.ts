@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { collections } from "@/lib/mongodb";
+import { collections, serializeDoc } from "@/lib/mongodb";
 import { withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireAuth } from "@/lib/server-auth";
 
@@ -50,22 +50,33 @@ export async function GET(req: NextRequest) {
         {
           $project: {
             _id: 1,
+            cart_id: 1,
+            product_id: 1,
             quantity: 1,
             price: 1,
-            "product_data._id": 1,
-            "product_data.name": 1,
-            "product_data.image_url": 1,
-            products: {
-              id: "$product_data._id",
-              name: "$product_data.name",
-              image_url: "$product_data.image_url",
-            },
+            created_at: 1,
+            product_data: { _id: 1, name: 1, image_url: 1, price: 1 },
           },
         },
         { $sort: { created_at: 1 } },
       ])
       .toArray();
-    return jsonResponse({ cart, items });
+    const normalizedItems = items.map((it: any) => {
+      const { _id, product_data, ...rest } = it;
+      return {
+        id: _id?.toString() ?? "",
+        ...rest,
+        products: product_data
+          ? {
+              id: product_data._id?.toString(),
+              name: product_data.name,
+              image_url: product_data.image_url,
+              price: product_data.price,
+            }
+          : undefined,
+      };
+    });
+    return jsonResponse({ cart: serializeDoc(cart), items: normalizedItems });
   });
 }
 

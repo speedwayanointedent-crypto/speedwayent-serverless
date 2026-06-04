@@ -53,18 +53,27 @@ export async function POST(req: NextRequest) {
           $project: {
             _id: 1,
             created_at: 1,
-            products: {
-              id: "$product_data._id",
-              name: "$product_data.name",
-              price: "$product_data.price",
-              image_url: "$product_data.image_url",
-              quantity: "$product_data.quantity",
-            },
+            product_data: { _id: 1, name: 1, price: 1, image_url: 1, quantity: 1 },
           },
         },
       ])
       .toArray();
 
-    return jsonResponse(item[0] || { id: result.insertedId.toString() }, { status: 201 });
+    const itemDoc = item[0] || {};
+    const { _id, product_data, ...rest } = itemDoc as any;
+    const normalized = {
+      id: _id?.toString() ?? result.insertedId.toString(),
+      ...rest,
+      products: product_data
+        ? {
+            id: product_data._id?.toString(),
+            name: product_data.name,
+            price: product_data.price,
+            image_url: product_data.image_url,
+            quantity: product_data.quantity,
+          }
+        : undefined,
+    };
+    return jsonResponse(normalized, { status: 201 });
   });
 }

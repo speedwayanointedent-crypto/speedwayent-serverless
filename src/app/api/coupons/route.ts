@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { collections, serializeDoc } from "@/lib/mongodb";
+import { collections, serializeDoc, serializeDocs } from "@/lib/mongodb";
 import { withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireRole } from "@/lib/server-auth";
 
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       .find({})
       .sort({ created_at: -1 })
       .toArray();
-    return jsonResponse(coupons);
+    return jsonResponse(serializeDocs(coupons));
   });
 }
 
