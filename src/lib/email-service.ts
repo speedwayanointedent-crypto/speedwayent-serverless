@@ -4,6 +4,7 @@ const {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   GOOGLE_REFRESH_TOKEN,
+  GOOGLE_ACCESS_TOKEN,
   GMAIL_USER,
   OWNER_EMAIL,
 } = process.env;
@@ -11,31 +12,48 @@ const {
 const ADMIN_EMAIL = OWNER_EMAIL || GMAIL_USER;
 const OAUTH_REDIRECT_URI = "https://developers.google.com/oauthplayground";
 
-const canSendEmail = () =>
-  Boolean(GMAIL_USER && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_REFRESH_TOKEN);
+const hasRefresh = Boolean(GMAIL_USER && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_REFRESH_TOKEN);
+const hasAccess = Boolean(GMAIL_USER && GOOGLE_ACCESS_TOKEN);
+const canSendEmail = () => hasRefresh || hasAccess;
 
 let cachedToken: string | null = null;
 let tokenExpiry = 0;
 
 const getOAuth2Client = () => {
   const client = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OAUTH_REDIRECT_URI);
-  client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN! });
+  if (GOOGLE_REFRESH_TOKEN) client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
   return client;
 };
 
-const getAccessToken = async () => {
+const getAccessToken = async (): Promise<string> => {
+  // 1) Use cached token if still valid
   if (cachedToken && Date.now() < tokenExpiry - 60_000) return cachedToken;
-  try {
-    const oauth2Client = getOAuth2Client();
-    const { credentials } = await oauth2Client.refreshAccessToken();
-    cachedToken = credentials.access_token!;
-    tokenExpiry = credentials.expiry_date || Date.now() + 3_600_000;
-    return cachedToken;
-  } catch (err) {
-    cachedToken = null;
-    tokenExpiry = 0;
-    throw err;
+
+  // 2) Use env-provided access token if it appears valid
+  if (GOOGLE_ACCESS_TOKEN) {
+    try {
+      const r = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${GOOGLE_ACCESS_TOKEN}`);
+      const data: any = await r.json();
+      if (r.ok && data.expires_in && Number(data.expires_in) > 60) {
+        cachedToken = GOOGLE_ACCESS_TOKEN;
+        tokenExpiry = Date.now() + Number(data.expires_in) * 1000;
+        return cachedToken;
+      }
+    } catch {
+      // ignore — fall through to refresh
+    }
   }
+
+  // 3) Refresh
+  if (!GOOGLE_REFRESH_TOKEN) {
+    throw new Error("No valid access token and no refresh token configured");
+  }
+  const oauth2Client = getOAuth2Client();
+  const { credentials } = await oauth2Client.refreshAccessToken();
+  if (!credentials.access_token) throw new Error("No access_token returned by refresh");
+  cachedToken = credentials.access_token;
+  tokenExpiry = credentials.expiry_date || Date.now() + 3_600_000;
+  return cachedToken;
 };
 
 const sendEmail = async ({ to, subject, html }: { to: string; subject: string; html: string }) => {
@@ -45,7 +63,9 @@ const sendEmail = async ({ to, subject, html }: { to: string; subject: string; h
   }
   try {
     const accessToken = await getAccessToken();
-    const gmail = google.gmail({ version: "v1", auth: getOAuth2Client() });
+    const oauth2Client = getOAuth2Client();
+    oauth2Client.setCredentials({ access_token: accessToken });
+    const gmail = google.gmail({ version: "v1", auth: oauth2Client });
     const headers = [
       `From: ${GMAIL_USER}`,
       `To: ${to}`,
