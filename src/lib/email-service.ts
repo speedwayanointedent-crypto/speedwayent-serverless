@@ -29,7 +29,17 @@ const getAccessToken = async (): Promise<string> => {
   // 1) Use cached token if still valid
   if (cachedToken && Date.now() < tokenExpiry - 60_000) return cachedToken;
 
-  // 2) Use env-provided access token if it appears valid
+  // 2) Refresh using the refresh token (long-term, production path)
+  if (GOOGLE_REFRESH_TOKEN && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+    const oauth2Client = getOAuth2Client();
+    const { credentials } = await oauth2Client.refreshAccessToken();
+    if (!credentials.access_token) throw new Error("No access_token returned by refresh");
+    cachedToken = credentials.access_token;
+    tokenExpiry = credentials.expiry_date || Date.now() + 3_600_000;
+    return cachedToken;
+  }
+
+  // 3) Last-resort fallback: env access token (works only while it hasn't expired)
   if (GOOGLE_ACCESS_TOKEN) {
     try {
       const r = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${GOOGLE_ACCESS_TOKEN}`);
@@ -40,20 +50,11 @@ const getAccessToken = async (): Promise<string> => {
         return cachedToken;
       }
     } catch {
-      // ignore — fall through to refresh
+      // ignore
     }
   }
 
-  // 3) Refresh
-  if (!GOOGLE_REFRESH_TOKEN) {
-    throw new Error("No valid access token and no refresh token configured");
-  }
-  const oauth2Client = getOAuth2Client();
-  const { credentials } = await oauth2Client.refreshAccessToken();
-  if (!credentials.access_token) throw new Error("No access_token returned by refresh");
-  cachedToken = credentials.access_token;
-  tokenExpiry = credentials.expiry_date || Date.now() + 3_600_000;
-  return cachedToken;
+  throw new Error("No valid access token and no working refresh token configured");
 };
 
 const sendEmail = async ({ to, subject, html }: { to: string; subject: string; html: string }) => {
