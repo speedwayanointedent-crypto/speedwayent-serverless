@@ -53,13 +53,73 @@ export async function GET(req: NextRequest) {
 
     const data = await collections
       .products()
-      .find(match)
-      .sort({ created_at: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
+      .aggregate([
+        { $match: match },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "category_id",
+            foreignField: "_id",
+            as: "category_data",
+          },
+        },
+        { $unwind: { path: "$category_data", preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from: "brands",
+            localField: "brand_id",
+            foreignField: "_id",
+            as: "brand_data",
+          },
+        },
+        { $unwind: { path: "$brand_data", preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from: "models",
+            localField: "model_id",
+            foreignField: "_id",
+            as: "model_data",
+          },
+        },
+        { $unwind: { path: "$model_data", preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from: "years",
+            localField: "year_id",
+            foreignField: "_id",
+            as: "year_data",
+          },
+        },
+        { $unwind: { path: "$year_data", preserveNullAndEmptyArrays: true } },
+        { $sort: { created_at: -1 } },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+      ])
       .toArray();
 
-    const filtered = data.map((p) => transformProductForFrontend(p));
+    const filtered = data.map((p: any) => ({
+      id: p._id.toString(),
+      _id: undefined,
+      name: p.name,
+      category_id: p.category_id?.toString(),
+      brand_id: p.brand_id?.toString(),
+      model_id: p.model_id?.toString(),
+      year_id: p.year_id?.toString(),
+      price: p.price,
+      cost_price: p.cost_price,
+      quantity: p.quantity,
+      description: p.description,
+      image_url: p.image_url,
+      gallery: p.gallery,
+      status: p.status,
+      created_at: p.created_at,
+      categories: p.category_data ? { name: p.category_data.name } : undefined,
+      brands: p.brand_data ? { name: p.brand_data.name } : undefined,
+      models: p.model_data
+        ? { name: p.model_data.name, image_url: p.model_data.image_url, gallery: p.model_data.gallery }
+        : undefined,
+      years: p.year_data ? { id: p.year_data._id?.toString(), label: p.year_data.label } : undefined,
+    }));
     const countResult = await collections.products().countDocuments(match);
     return jsonResponse({
       data: filtered,
