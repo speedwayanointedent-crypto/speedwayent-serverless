@@ -2,13 +2,13 @@ import { type NextRequest } from "next/server";
 import { collections, serializeDoc, toObjectId } from "@/lib/mongodb";
 import { ApiError, withErrorHandling, jsonResponse } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
-import { requireRole } from "@/lib/server-auth";
+import { getUserFromRequest, requireRole } from "@/lib/server-auth";
 import { productUpdateSchema } from "@/lib/schemas/product";
 import { deleteFromProduct } from "@/lib/cloudinary-cleanup";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withErrorHandling(async () => {
     const { id } = await params;
     const productId = toObjectId(id);
@@ -29,7 +29,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     if (!product || product.length === 0) throw ApiError.notFound("Product not found");
     const p = product[0];
+
+    const user = getUserFromRequest(req);
+    const isStaff = user?.role === "admin" || user?.role === "manager";
     const { _id, category_data, brand_data, model_data, year_data, cost_price, ...rest } = p;
+
     return jsonResponse({
       id: _id?.toString(),
       _id: undefined,
@@ -44,6 +48,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         ? { name: model_data.name, image_url: model_data.image_url, gallery: model_data.gallery }
         : undefined,
       years: year_data ? { id: year_data._id?.toString(), label: year_data.label } : undefined,
+      ...(isStaff ? { cost_price } : {}),
     });
   });
 }

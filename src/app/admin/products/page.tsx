@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { Plus, Search, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2, Upload, Download, Package } from "lucide-react";
+import Link from "next/link";
+import { Plus, Search, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2, Upload, Download, Package, Eye } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete, getApiErrorMessage } from "@/lib/api";
 import { ProductCardSkeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
@@ -527,7 +528,10 @@ export default function AdminProductsPage() {
                   className="overflow-hidden animate-fade-in-up"
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
-                  <div className="aspect-[4/3] bg-muted relative overflow-hidden">
+                  <Link
+                    href={`/admin/products/${p.id}`}
+                    className="block aspect-[4/3] bg-muted relative overflow-hidden"
+                  >
                     {imgSrc ? (
                       <img
                         src={imgSrc}
@@ -547,7 +551,7 @@ export default function AdminProductsPage() {
                     <div className="absolute top-3 right-3">
                       {getStockBadge(p.quantity)}
                     </div>
-                  </div>
+                  </Link>
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="min-w-0 flex-1">
@@ -555,7 +559,11 @@ export default function AdminProductsPage() {
                           {p.categories?.name || "Uncategorized"}
                           {p.brands?.name && ` • ${p.brands.name}`}
                         </p>
-                        <h3 className="font-semibold text-sm line-clamp-2 mt-1">{p.name}</h3>
+                        <h3 className="font-semibold text-sm line-clamp-2 mt-1">
+                          <Link href={`/admin/products/${p.id}`} className="hover:text-primary transition-colors">
+                            {p.name}
+                          </Link>
+                        </h3>
                       </div>
                     </div>
                     <div className="flex items-center justify-between mb-3">
@@ -575,6 +583,13 @@ export default function AdminProductsPage() {
                         <Pencil className="mr-1.5 h-3.5 w-3.5" />
                         Edit
                       </Button>
+                      <Link
+                        href={`/admin/products/${p.id}`}
+                        aria-label="View product details"
+                        className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Link>
                       <Button
                         variant="ghost"
                         size="sm"
