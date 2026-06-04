@@ -80,16 +80,14 @@ function AdminProductsPageInner() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Option | null>(null);
 
-  const [page, setPageState] = useState(1);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  useEffect(() => {
+  const page = useMemo(() => {
     const raw = searchParams.get("page");
     const parsed = parseInt(raw || "1", 10);
-    const next = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
-    setPageState((prev) => (prev === next ? prev : next));
+    return Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
   }, [searchParams]);
 
   const setPage = useCallback(
@@ -157,8 +155,8 @@ function AdminProductsPageInner() {
   }, [loadProducts]);
 
   useEffect(() => {
-    if (searchParams.get("page") && searchParams.get("page") !== "1") {
-      const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams.toString());
+    if (params.has("page")) {
       params.delete("page");
       const qs = params.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
