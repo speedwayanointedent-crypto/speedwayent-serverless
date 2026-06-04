@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -53,14 +53,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isStaff, clearAuth, hydrated } = useAuth();
+  const { isStaff, clearAuth } = useAuth();
 
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!isAuthenticated || !isStaff) {
-      router.replace("/login");
-    }
-  }, [hydrated, isAuthenticated, isStaff, router]);
+  // NOTE: Auth gating is handled by middleware.ts (it has access to the
+  // httpOnly cookie). This client-side check previously caused a
+  // bounce-loop on every admin page render: on first paint
+  // isAuthenticated is false (localStorage not yet read), this effect
+  // redirected to /login, the middleware saw the valid cookie and
+  // redirected back to /admin — so refresh and any filter change
+  // kicked the user back to the admin dashboard home.
 
   const breadcrumbs = useMemo(() => {
     const segments = pathname?.split("/").filter(Boolean) || [];
