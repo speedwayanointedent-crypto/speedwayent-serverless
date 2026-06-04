@@ -4,6 +4,7 @@ import { collections, serializeDoc, toObjectId } from "@/lib/mongodb";
 import { ApiError, withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireRole } from "@/lib/server-auth";
 import { logAudit } from "@/lib/audit";
+import { sendEmail } from "@/lib/email-service";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,20 @@ export async function PATCH(
       },
       req
     );
+
+    if (result.user_id) {
+      const customer: any = await collections
+        .users()
+        .findOne({ _id: toObjectId(result.user_id) as any }, { projection: { email: 1, full_name: 1 } });
+      if (customer?.email) {
+        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+        sendEmail({
+          to: customer.email,
+          subject: `Return ${statusLabel} — Speedway Anointed Ent`,
+          html: `<p>Hi ${customer.full_name || "Customer"},</p><p>Your return request has been updated to: <strong>${statusLabel}</strong>.</p><p>If you have any questions, contact us at info@speedway.com.</p>`,
+        }).catch((err) => console.error("[email] return status email failed", err));
+      }
+    }
 
     return jsonResponse(serializeDoc(result));
   });

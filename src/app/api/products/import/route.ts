@@ -62,10 +62,10 @@ export async function POST(req: NextRequest) {
 
       await collections.products().insertOne({
         name: row.name,
-        category_id: category?._id?.toString() || null,
-        brand_id: brand?._id?.toString() || null,
-        model_id: model?._id?.toString() || null,
-        year_id: year?._id?.toString() || null,
+        category_id: category?._id || null,
+        brand_id: brand?._id || null,
+        model_id: model?._id || null,
+        year_id: year?._id || null,
         price: Number(row.price || 0),
         cost_price: row.cost_price ? Number(row.cost_price) : null,
         quantity: Number(row.quantity || 0),

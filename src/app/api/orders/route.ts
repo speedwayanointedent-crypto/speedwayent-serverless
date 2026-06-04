@@ -101,6 +101,15 @@ export async function POST(req: NextRequest) {
     }));
     await collections.orderItems().insertMany(orderItems);
 
+    for (const it of items) {
+      const pid = toObjectId(it.product_id);
+      if (!pid) continue;
+      await collections.products().updateOne(
+        { _id: pid as any },
+        { $inc: { quantity: -it.quantity }, $set: { updated_at: new Date() } }
+      );
+    }
+
     await collections.orderStatusEvents().insertOne({
       order_id: orderId,
       status: "pending",
@@ -137,6 +146,15 @@ export async function POST(req: NextRequest) {
         reference: orderId.toString(),
         created_at: new Date(),
       });
+    }
+
+    await collections.cart().updateOne(
+      { user_id: userId, status: "active" },
+      { $set: { status: "ordered", updated_at: new Date() } }
+    );
+    const orderedCart = await collections.cart().findOne({ user_id: userId, status: "ordered" });
+    if (orderedCart) {
+      await collections.cartItems().deleteMany({ cart_id: orderedCart._id });
     }
 
     const userProfile: any = await collections.users().findOne(

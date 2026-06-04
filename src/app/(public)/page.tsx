@@ -121,14 +121,17 @@ export default function LandingPage() {
     async function loadData() {
       try {
         const [reviewsData, productsData, categoriesData] = await Promise.all([
-          apiGet<Review[]>("/api/reviews").catch(() => []),
-          apiGet<{ data: Product[] }>("/api/products?limit=6").catch(() => ({ data: [] })),
-          apiGet<Category[]>("/api/categories").catch(() => []),
+          apiGet<Review[] | unknown>("/api/reviews").catch(() => []),
+          apiGet<{ data: Product[] } | unknown>("/api/products?limit=6").catch(() => ({ data: [] })),
+          apiGet<Category[] | unknown>("/api/categories").catch(() => []),
         ]);
-        setReviews((reviewsData || []).slice(0, 6));
-        const products = productsData?.data || [];
-        setFeatured([...products].sort(() => Math.random() - 0.5).slice(0, 3));
-        setDbCategories(categoriesData || []);
+        const safeReviews = Array.isArray(reviewsData) ? reviewsData : [];
+        setReviews(safeReviews.slice(0, 6));
+        const products = (productsData as any)?.data;
+        const safeProducts = Array.isArray(products) ? products : [];
+        setFeatured([...safeProducts].sort(() => Math.random() - 0.5).slice(0, 3));
+        const safeCategories = Array.isArray(categoriesData) ? categoriesData : [];
+        setDbCategories(safeCategories);
       } catch { /* Silently fail */ }
     }
     loadData();
@@ -143,8 +146,8 @@ export default function LandingPage() {
     return () => clearInterval(timer);
   }, [reviews.length]);
 
-  const reviewAvg = reviews.length > 0
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+  const reviewAvg = Array.isArray(reviews) && reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + (r?.rating || 0), 0) / reviews.length).toFixed(1)
     : "5.0";
 
   const handleSearch = (e: React.FormEvent) => {

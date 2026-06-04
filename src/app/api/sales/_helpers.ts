@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { collections, serializeDoc } from "@/lib/mongodb";
+import { collections, serializeDoc, toObjectId } from "@/lib/mongodb";
 import { type AuthUser } from "@/lib/server-auth";
 import { logAudit } from "@/lib/audit";
 
@@ -32,6 +32,14 @@ export async function processSale(payload: SalePayload, user: AuthUser, req?: Ne
       reference: result.insertedId.toString(),
       created_at: new Date(),
     });
+
+    const pid = toObjectId(payload.product_id);
+    if (pid) {
+      await collections.products().updateOne(
+        { _id: pid as any },
+        { $inc: { quantity: -payload.quantity }, $set: { updated_at: new Date() } }
+      );
+    }
   }
 
   await logAudit(

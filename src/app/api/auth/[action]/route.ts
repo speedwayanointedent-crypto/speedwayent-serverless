@@ -13,7 +13,7 @@ const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   full_name: z.string().min(1),
-  role: z.enum(["admin", "manager", "staff", "customer"]).optional().default("customer"),
+  role: z.enum(["admin", "manager", "staff", "customer"]).optional(),
 });
 
 const loginSchema = z.object({
@@ -38,11 +38,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
 
     if (action === "signup") {
-      const { email, password, full_name, role } = signupSchema.parse(body);
+      const { email, password, full_name } = signupSchema.parse(body);
       const passwordHash = await bcrypt.hash(password, 10);
       const existing = await collections.users().findOne({ email });
       if (existing) throw ApiError.conflict("Email already registered");
 
+      const role = "customer";
       const result = await collections.users().insertOne({
         email,
         full_name,

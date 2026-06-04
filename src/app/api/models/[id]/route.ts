@@ -3,6 +3,7 @@ import { z } from "zod";
 import { collections, serializeDoc, toObjectId } from "@/lib/mongodb";
 import { ApiError, withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireRole } from "@/lib/server-auth";
+import { deleteCloudinaryAssets } from "@/lib/cloudinary-cleanup";
 
 export const dynamic = "force-dynamic";
 
@@ -69,8 +70,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   return withErrorHandling(async () => {
     await requireRole(req, ["admin", "manager"]);
     const { id } = await params;
+    const doc = await collections.models().findOne({ _id: toObjectId(id) as any });
+    if (!doc) throw ApiError.notFound("Model not found");
     const result = await collections.models().deleteOne({ _id: toObjectId(id) as any });
     if (result.deletedCount === 0) throw ApiError.notFound("Model not found");
+
+    const urls: (string | null | undefined)[] = [doc?.image_url];
+    if (Array.isArray(doc?.gallery)) urls.push(...doc.gallery);
+    deleteCloudinaryAssets(urls).catch((err) => console.error("[cloudinary] model cleanup failed", err));
+
     return new Response(null, { status: 204 });
   });
 }

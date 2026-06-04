@@ -4,6 +4,7 @@ import { ApiError, withErrorHandling, jsonResponse } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { requireRole } from "@/lib/server-auth";
 import { productUpdateSchema } from "@/lib/schemas/product";
+import { deleteFromProduct } from "@/lib/cloudinary-cleanup";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     if (!product || product.length === 0) throw ApiError.notFound("Product not found");
     const p = product[0];
-    const { _id, category_data, brand_data, model_data, year_data, ...rest } = p;
+    const { _id, category_data, brand_data, model_data, year_data, cost_price, ...rest } = p;
     return jsonResponse({
       id: _id?.toString(),
       _id: undefined,
@@ -54,9 +55,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json().catch(() => ({}));
     const payload = productUpdateSchema.parse(body);
 
+    const updatePayload: any = { ...payload, updated_at: new Date() };
+    if (payload.category_id) updatePayload.category_id = toObjectId(payload.category_id);
+    if (payload.brand_id) updatePayload.brand_id = toObjectId(payload.brand_id);
+    if (payload.model_id) updatePayload.model_id = toObjectId(payload.model_id);
+    if (payload.year_id) updatePayload.year_id = toObjectId(payload.year_id);
+
     const doc: any = await collections.products().findOneAndUpdate(
       { _id: toObjectId(id) as any },
-      { $set: { ...payload, updated_at: new Date() } },
+      { $set: updatePayload },
       { returnDocument: "after" }
     );
     if (!doc) throw ApiError.notFound("Product not found");
@@ -86,6 +93,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       { $set: { is_deleted: true, updated_at: new Date() } }
     );
     if (!doc) throw ApiError.notFound("Product not found");
+
+    deleteFromProduct(doc).catch((err) => console.error("[cloudinary] product cleanup failed", err));
 
     await logAudit(
       { user_id: user.id, user_email: user.email, action: "delete", resource: "product", resource_id: id },

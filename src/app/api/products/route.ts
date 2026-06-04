@@ -112,7 +112,6 @@ export async function GET(req: NextRequest) {
       model_id: p.model_id?.toString(),
       year_id: p.year_id?.toString(),
       price: p.price,
-      cost_price: p.cost_price,
       quantity: p.quantity,
       description: p.description,
       image_url: p.image_url,
@@ -147,6 +146,10 @@ export async function POST(req: NextRequest) {
 
     const result = await collections.products().insertOne({
       ...payload,
+      category_id: toObjectId(payload.category_id),
+      brand_id: payload.brand_id ? toObjectId(payload.brand_id) : null,
+      model_id: payload.model_id ? toObjectId(payload.model_id) : null,
+      year_id: payload.year_id ? toObjectId(payload.year_id) : null,
       is_deleted: false,
       created_at: new Date(),
       updated_at: new Date(),

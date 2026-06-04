@@ -3,6 +3,7 @@ import { z } from "zod";
 import { collections, serializeDoc, toObjectId } from "@/lib/mongodb";
 import { ApiError, withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireRole } from "@/lib/server-auth";
+import { deleteCloudinaryAssets } from "@/lib/cloudinary-cleanup";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +47,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   return withErrorHandling(async () => {
     await requireRole(req, ["admin", "manager"]);
     const { id } = await params;
+    const doc = await collections.categories().findOne({ _id: toObjectId(id) as any });
+    if (!doc) throw ApiError.notFound("Category not found");
     const result = await collections.categories().deleteOne({ _id: toObjectId(id) as any });
     if (result.deletedCount === 0) throw ApiError.notFound("Category not found");
+
+    deleteCloudinaryAssets([doc?.image_url]).catch((err) => console.error("[cloudinary] category cleanup failed", err));
+
     return new Response(null, { status: 204 });
   });
 }
