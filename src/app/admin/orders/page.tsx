@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
 type Order = {
-  id: number;
+  id: string;
   total: number;
   status: string;
   created_at: string;
@@ -21,12 +21,12 @@ type Order = {
 };
 
 type OrderReturn = {
-  id: number;
+  id: string;
   status: string;
   reason?: string | null;
   amount?: number | null;
   created_at: string;
-  orders?: { id: number; total: number };
+  orders?: { id: string; total: number };
   users?: { full_name?: string; email?: string };
 };
 
@@ -80,7 +80,7 @@ export default function AdminOrdersPage() {
     load();
   }, [load]);
 
-  const updateStatus = async (id: number, status: string) => {
+  const updateStatus = async (id: string, status: string) => {
     try {
       await apiPatch(`/orders/${id}/status`, { status });
       push("Order status updated", "success");
@@ -90,7 +90,7 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const updateReturnStatus = async (id: number, status: string) => {
+  const updateReturnStatus = async (id: string, status: string) => {
     try {
       await apiPatch(`/orders/returns/${id}`, { status });
       push("Return updated", "success");

@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { collections, toObjectId } from "@/lib/mongodb";
+import { collections, normalizeOrders, toObjectId } from "@/lib/mongodb";
 import { withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireAuth, requireRole } from "@/lib/server-auth";
 import { logAudit } from "@/lib/audit";
@@ -20,14 +20,31 @@ const orderSchema = z.object({
   coupon_code: z.string().optional().nullable(),
   shipping_fee: z.number().optional().nullable(),
   delivery_address_id: z.string().optional().nullable(),
+  customer_name: z.string().trim().min(1).optional().nullable(),
+  customer_email: z.string().email().optional().nullable(),
+  customer_phone: z.string().trim().min(1).optional().nullable(),
+  delivery_address: z.string().trim().min(1).optional().nullable(),
+  city: z.string().trim().min(1).optional().nullable(),
+  notes: z.string().trim().optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {
   return withErrorHandling(async () => {
     const user = await requireAuth(req);
     const body = await req.json().catch(() => ({}));
-    const { items, total, coupon_code, shipping_fee, delivery_address_id } =
-      orderSchema.parse(body);
+    const {
+      items,
+      total,
+      coupon_code,
+      shipping_fee,
+      delivery_address_id,
+      customer_name,
+      customer_email,
+      customer_phone,
+      delivery_address,
+      city,
+      notes,
+    } = orderSchema.parse(body);
     const userId = user.id;
     const subtotal = items.reduce((sum, it) => sum + it.quantity * it.price, 0);
     let discountTotal = 0;
@@ -62,6 +79,12 @@ export async function POST(req: NextRequest) {
       coupon_code: appliedCoupon?.code || null,
       shipping_fee: shipping_fee || 0,
       delivery_address_id: delivery_address_id || null,
+      customer_name: customer_name || null,
+      customer_email: customer_email || null,
+      customer_phone: customer_phone || null,
+      delivery_address: delivery_address || null,
+      city: city || null,
+      notes: notes || null,
       status: "pending",
       estimated_delivery_date: estimatedDelivery.toISOString().slice(0, 10),
       created_at: new Date(),
@@ -183,7 +206,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     return jsonResponse({
-      data: orders,
+      data: normalizeOrders(orders as any),
       pagination: {
         page: pageNum,
         limit: limitNum,

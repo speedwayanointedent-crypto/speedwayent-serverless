@@ -21,7 +21,7 @@ type Product = {
   years?: { id: string; label: string };
 };
 
-type Review = { id: number; rating: number; title?: string | null; body: string; created_at: string; users?: { full_name?: string | null } };
+type Review = { id: string; rating: number; title?: string | null; body: string; created_at: string; users?: { full_name?: string | null } };
 
 const fallbackImage = "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?q=80&w=1200";
 

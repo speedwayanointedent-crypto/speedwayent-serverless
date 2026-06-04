@@ -6,9 +6,9 @@ import { apiGet } from "@/lib/api";
 import { Package, Truck, CheckCircle, Clock, XCircle, ShoppingBag } from "lucide-react";
 
 type Order = {
-  id: number; total: number; status: string; created_at: string;
+  id: string; total: number; status: string; created_at: string;
   estimated_delivery_date?: string | null;
-  order_status_events?: { id: number; status: string; note?: string | null; created_at: string }[];
+  order_status_events?: { id: string; status: string; note?: string | null; created_at: string }[];
 };
 
 const statusConfig: Record<string, { color: string; bg: string; icon: React.ComponentType<{ className?: string }> }> = {

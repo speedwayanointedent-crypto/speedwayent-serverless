@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { collections } from "@/lib/mongodb";
+import { collections, normalizeSales } from "@/lib/mongodb";
 import { withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireRole } from "@/lib/server-auth";
 import { processSale } from "./_helpers";
@@ -44,13 +44,13 @@ export async function GET(req: NextRequest) {
             total: 1,
             note: 1,
             created_at: 1,
-            products: { name: "$product_data.name" },
+            product_data: { name: 1 },
           },
         },
         { $sort: { created_at: -1 } },
       ])
       .toArray();
-    return jsonResponse(sales);
+    return jsonResponse(normalizeSales(sales as any));
   });
 }
 

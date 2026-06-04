@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { collections } from "@/lib/mongodb";
+import { collections, serializeDoc } from "@/lib/mongodb";
 import { withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireAuth } from "@/lib/server-auth";
 
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
             _id: 1,
             created_at: 1,
             products: {
-              id: "$product_data._id",
+              id: { $toString: "$product_data._id" },
               name: "$product_data.name",
               price: "$product_data.price",
               image_url: "$product_data.image_url",
@@ -51,6 +51,10 @@ export async function GET(req: NextRequest) {
         { $sort: { created_at: -1 } },
       ])
       .toArray();
-    return jsonResponse({ wishlist, items });
+    const normalizedItems = items.map((it: any) => {
+      const { _id, ...rest } = it;
+      return { id: _id?.toString() ?? "", ...rest };
+    });
+    return jsonResponse({ wishlist: serializeDoc(wishlist), items: normalizedItems });
   });
 }

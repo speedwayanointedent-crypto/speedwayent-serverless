@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { collections } from "@/lib/mongodb";
+import { collections, normalizeAuditLogs } from "@/lib/mongodb";
 import { withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireRole } from "@/lib/server-auth";
 
@@ -49,16 +49,13 @@ export async function GET(req: NextRequest) {
             metadata: 1,
             details: 1,
             created_at: 1,
-            users: {
-              full_name: "$user_data.full_name",
-              email: "$user_data.email",
-            },
+            user_data: { full_name: 1, email: 1 },
           },
         },
         { $sort: { created_at: -1 } },
         { $limit: limit },
       ])
       .toArray();
-    return jsonResponse(logs);
+    return jsonResponse(normalizeAuditLogs(logs as any));
   });
 }

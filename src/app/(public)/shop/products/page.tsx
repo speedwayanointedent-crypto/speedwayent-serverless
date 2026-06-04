@@ -94,6 +94,7 @@ function ShopProductsPageInner() {
     }
     loadBreadcrumbs();
     loadProducts(pageNum);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId, brandId, modelId, pageNum]);
 
   const handleFilterChange = () => {

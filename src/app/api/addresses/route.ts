@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { collections, toObjectId } from "@/lib/mongodb";
+import { collections, serializeDoc, serializeDocs, toObjectId } from "@/lib/mongodb";
 import { ApiError, withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireAuth } from "@/lib/server-auth";
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       .find({ user_id: user.id })
       .sort({ created_at: -1 })
       .toArray();
-    return jsonResponse(addresses);
+    return jsonResponse(serializeDocs(addresses));
   });
 }
 
@@ -47,6 +47,6 @@ export async function POST(req: NextRequest) {
       updated_at: new Date(),
     });
     const inserted = await collections.addresses().findOne({ _id: result.insertedId });
-    return jsonResponse(inserted, { status: 201 });
+    return jsonResponse(serializeDoc(inserted), { status: 201 });
   });
 }

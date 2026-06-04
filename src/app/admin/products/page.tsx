@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Plus, Search, Trash2, Pencil, ChevronLeft, ChevronRight, Filter, X, Loader2, Upload, Download, Package } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete, getApiErrorMessage } from "@/lib/api";
-import { ProductCardSkeleton, StatCardSkeleton } from "@/components/ui/Skeleton";
+import { ProductCardSkeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -423,7 +423,7 @@ export default function AdminProductsPage() {
               Import
             </Button>
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={exporting}>
-              <Download className="mr-2 h-4 w-4" />
+              {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               Export
             </Button>
             <Button variant="primary" size="sm" onClick={() => setOpen(true)}>
@@ -512,11 +512,10 @@ export default function AdminProductsPage() {
       </Card>
 
       {loading ? (
-        <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <StatCardSkeleton key={i} />
-            ))}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading products from database…
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 12 }).map((_, i) => (

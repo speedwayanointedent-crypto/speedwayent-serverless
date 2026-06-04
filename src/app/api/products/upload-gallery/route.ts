@@ -6,6 +6,9 @@ import { requireRole } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
 export async function POST(req: NextRequest) {
   return withErrorHandling(async () => {
     await requireRole(req, ["admin", "manager"]);
@@ -18,6 +21,13 @@ export async function POST(req: NextRequest) {
     const isImage = file.type.startsWith("image/");
     if (!isVideo && !isImage) {
       return jsonResponse({ error: "Only images and videos are allowed" }, { status: 400 });
+    }
+    const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    if (file.size > maxBytes) {
+      return jsonResponse(
+        { error: `File too large. Max ${(maxBytes / (1024 * 1024)).toFixed(0)}MB for ${isVideo ? "videos" : "images"}.` },
+        { status: 413 }
+      );
     }
     const buf = Buffer.from(await file.arrayBuffer());
     const result = isVideo

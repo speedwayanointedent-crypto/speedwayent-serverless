@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { collections, toObjectId } from "@/lib/mongodb";
+import { collections, serializeDoc, toObjectId } from "@/lib/mongodb";
 import { ApiError, withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireAuth } from "@/lib/server-auth";
 import { logAudit } from "@/lib/audit";
@@ -46,6 +46,6 @@ export async function POST(
     );
 
     const inserted = await collections.orderReturns().findOne({ _id: result.insertedId });
-    return jsonResponse(inserted, { status: 201 });
+    return jsonResponse(serializeDoc(inserted), { status: 201 });
   });
 }

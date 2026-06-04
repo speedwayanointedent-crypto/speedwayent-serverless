@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { collections, toObjectId } from "@/lib/mongodb";
+import { collections, normalizeOrder, toObjectId } from "@/lib/mongodb";
 import { withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireAuth } from "@/lib/server-auth";
 
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     );
 
     return jsonResponse({
-      data: ordersWithProducts,
+      data: ordersWithProducts.map((o) => normalizeOrder(o)),
       pagination: {
         page: pageNum,
         limit: limitNum,

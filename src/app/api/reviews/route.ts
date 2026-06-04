@@ -35,14 +35,22 @@ export async function GET() {
             body: 1,
             created_at: 1,
             product_id: 1,
-            "user_data.full_name": 1,
+            user_data: { full_name: 1 },
             users: { full_name: "$user_data.full_name" },
           },
         },
         { $sort: { created_at: -1 } },
       ])
       .toArray();
-    return jsonResponse(reviews);
+    const normalized = reviews.map((r: any) => {
+      const { _id, user_data, ...rest } = r;
+      return {
+        id: _id?.toString() ?? "",
+        ...rest,
+        users: user_data ? { full_name: user_data.full_name } : undefined,
+      };
+    });
+    return jsonResponse(normalized);
   });
 }
 

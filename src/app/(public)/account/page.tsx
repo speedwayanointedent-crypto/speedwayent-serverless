@@ -54,12 +54,12 @@ type Address = {
 };
 
 type WishlistItem = {
-  id: number;
+  id: string;
   products: { id: string; name: string; price: number; image_url?: string | null };
 };
 
 type Notification = {
-  id: number;
+  id: string;
   title: string;
   body?: string | null;
   type?: string | null;
@@ -186,7 +186,7 @@ export default function AccountPage() {
     }
   };
 
-  const removeWishlistItem = async (id: number) => {
+  const removeWishlistItem = async (id: string) => {
     try {
       await apiDelete(`/api/wishlist/items/${id}`);
       setWishlist((prev) => prev.filter((item) => item.id !== id));

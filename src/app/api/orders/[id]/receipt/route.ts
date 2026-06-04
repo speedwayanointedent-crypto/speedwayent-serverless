@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { collections, toObjectId } from "@/lib/mongodb";
+import { collections, normalizeOrder, toObjectId } from "@/lib/mongodb";
 import { ApiError, withErrorHandling, jsonResponse } from "@/lib/errors";
 import { requireAuth } from "@/lib/server-auth";
 
@@ -43,6 +43,6 @@ export async function GET(
     const isAdmin = ["admin", "manager", "staff"].includes(user.role);
     if (!isOwner && !isAdmin) throw ApiError.forbidden("Forbidden");
 
-    return jsonResponse(order[0]);
+    return jsonResponse(normalizeOrder(order[0]));
   });
 }

@@ -16,6 +16,12 @@ const modelSchema = z.object({
 
 export async function GET() {
   return withErrorHandling(async () => {
+    const hiddenBrands = await collections
+      .brands()
+      .find({ is_hidden: true }, { projection: { _id: 1 } })
+      .toArray();
+    const hiddenSet = new Set(hiddenBrands.map((b: any) => b._id.toString()));
+
     const data = await collections
       .models()
       .aggregate([
@@ -29,9 +35,37 @@ export async function GET() {
           },
         },
         { $unwind: { path: "$brand_data", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            brand_id: 1,
+            years: 1,
+            image_url: 1,
+            gallery: 1,
+            is_hidden: 1,
+            created_at: 1,
+            updated_at: 1,
+            brand_data: { _id: 1, name: 1, logo_url: 1, is_hidden: 1 },
+            brands: {
+              id: "$brand_data._id",
+              name: "$brand_data.name",
+              logo_url: "$brand_data.logo_url",
+            },
+          },
+        },
       ])
       .toArray();
-    return jsonResponse(data);
+
+    const filtered = data.filter((m: any) => {
+      if (!m.brand_id) return true;
+      return !hiddenSet.has(m.brand_id.toString());
+    });
+    const normalized = filtered.map((m: any) => {
+      const { _id, brand_data, ...rest } = m;
+      return { id: _id?.toString() ?? "", ...rest };
+    });
+    return jsonResponse(normalized);
   });
 }
 

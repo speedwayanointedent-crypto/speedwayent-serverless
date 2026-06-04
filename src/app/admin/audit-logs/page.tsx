@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 type AuditLog = {
-  id: number;
+  id: string;
   action: string;
   entity: string;
   entity_id?: string | null;

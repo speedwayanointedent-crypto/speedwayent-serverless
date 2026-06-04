@@ -106,4 +106,50 @@ export function serializeDocs<T extends Record<string, any>>(docs: T[]): Array<T
   return docs.map((doc) => serializeDoc(doc) as T & { id: string });
 }
 
+export function normalizeOrder<T extends Record<string, any>>(doc: T | null | undefined): (T & { id: string; users?: { full_name?: string; email?: string } }) | null {
+  if (!doc) return null;
+  const { _id, user_data, ...rest } = doc as any;
+  return {
+    id: _id?.toString() ?? "",
+    ...rest,
+    users: user_data
+      ? { full_name: user_data.full_name, email: user_data.email }
+      : undefined,
+  } as any;
+}
+
+export function normalizeOrders<T extends Record<string, any>>(docs: T[]): Array<T & { id: string; users?: { full_name?: string; email?: string } }> {
+  return docs.map((doc) => normalizeOrder(doc) as T & { id: string; users?: { full_name?: string; email?: string } });
+}
+
+export function normalizeSale<T extends Record<string, any>>(doc: T | null | undefined): (T & { id: string; product_name?: string }) | null {
+  if (!doc) return null;
+  const { _id, product_data, ...rest } = doc as any;
+  return {
+    id: _id?.toString() ?? "",
+    ...rest,
+    product_name: rest.product_name || product_data?.name || null,
+  } as any;
+}
+
+export function normalizeSales<T extends Record<string, any>>(docs: T[]): Array<T & { id: string; product_name?: string }> {
+  return docs.map((doc) => normalizeSale(doc) as T & { id: string; product_name?: string });
+}
+
+export function normalizeAuditLog<T extends Record<string, any>>(doc: T | null | undefined): (T & { id: string; users?: { full_name?: string; email?: string } }) | null {
+  if (!doc) return null;
+  const { _id, user_data, ...rest } = doc as any;
+  return {
+    id: _id?.toString() ?? "",
+    ...rest,
+    users: user_data
+      ? { full_name: user_data.full_name, email: user_data.email }
+      : undefined,
+  } as any;
+}
+
+export function normalizeAuditLogs<T extends Record<string, any>>(docs: T[]): Array<T & { id: string; users?: { full_name?: string; email?: string } }> {
+  return docs.map((doc) => normalizeAuditLog(doc) as T & { id: string; users?: { full_name?: string; email?: string } });
+}
+
 export { ObjectId };
