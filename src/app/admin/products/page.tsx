@@ -15,14 +15,19 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import { fetchAllProducts } from "@/lib/productsApi";
-import { useSearch } from "@/lib/useSearch";
 import type { Product } from "@/types/sale";
 
 type Option = { id: string; name?: string; label?: string; brand_id?: string; years?: string[] };
 
+type ProductsResponse = {
+  data: Product[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
 export default function AdminProductsPage() {
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
@@ -57,6 +62,8 @@ export default function AdminProductsPage() {
   const [importing, setImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterBrand, setFilterBrand] = useState("");
   const [filterModel, setFilterModel] = useState("");
@@ -65,6 +72,11 @@ export default function AdminProductsPage() {
 
   const [page, setPage] = useState(1);
   const PRODUCTS_PER_PAGE = 24;
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   const visibleFilterModels = useMemo(() => {
     if (!filterBrand) return models;
@@ -76,96 +88,61 @@ export default function AdminProductsPage() {
     return years.filter((y) => selectedModel.years?.includes(y.label || ""));
   }, [years, selectedModel]);
 
-  const searchFields = useMemo(() => [
-    "name",
-    "categories.name",
-    "brands.name",
-    "models.name",
-  ] as (keyof Product | string)[], []);
-
-  const {
-    query: searchQuery,
-    setQuery: setSearchQuery,
-    items: searchedProducts,
-    clearSearch,
-  } = useSearch<Product>(allProducts, {
-    fields: searchFields,
-    debounceMs: 200,
-    keepResultsOnEmpty: true,
-  });
-
-  const filteredByCategoryBrandModel = useMemo(() => {
-    let result = searchedProducts;
-
-    if (filterCategory) {
-      result = result.filter((p) => p.category_id === filterCategory);
-    }
-    if (filterBrand) {
-      result = result.filter((p) => p.brand_id === filterBrand);
-    }
-    if (filterModel) {
-      result = result.filter((p) => p.model_id === filterModel);
-    }
-
-    return result;
-  }, [searchedProducts, filterCategory, filterBrand, filterModel]);
-
-  const totalPages = Math.ceil(filteredByCategoryBrandModel.length / PRODUCTS_PER_PAGE);
-
   const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const products = await fetchAllProducts();
-      setAllProducts(products);
+      const params: Record<string, string | number> = {
+        page,
+        limit: PRODUCTS_PER_PAGE,
+      };
+      if (debouncedSearch) params.q = debouncedSearch;
+      if (filterCategory) params.category_id = filterCategory;
+      if (filterBrand) params.brand_id = filterBrand;
+      if (filterModel) params.model_id = filterModel;
+      const res = await apiGet<ProductsResponse>("/products", { params });
+      setProducts(res?.data || []);
+      setTotal(res?.pagination?.total || 0);
+      setTotalPages(res?.pagination?.totalPages || 1);
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Failed to load products:", err);
       push(getApiErrorMessage(err), "error");
-      setAllProducts([]);
+      setProducts([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  }, [push]);
-
-  const warmupRender = useCallback(async () => {
-    try {
-      await apiGet("/health", { timeout: 60000, skipRetry: true });
-    } catch {
-    }
-  }, []);
-
-  const load = useCallback(async () => {
-    try {
-      const results = await Promise.allSettled([
-        apiGet<Option[]>("/categories"),
-        apiGet<Option[]>("/brands"),
-        apiGet<Option[]>("/models"),
-        apiGet<Option[]>("/years"),
-      ]);
-      if (results[0].status === "fulfilled") setCategories(results[0].value || []);
-      if (results[1].status === "fulfilled") setBrands(results[1].value || []);
-      if (results[2].status === "fulfilled") setModels(results[2].value || []);
-      if (results[3].status === "fulfilled") setYears(results[3].value || []);
-    } catch (err) {
-      console.error("Failed to load options:", err);
-    }
-  }, []);
+  }, [page, debouncedSearch, filterCategory, filterBrand, filterModel, push]);
 
   useEffect(() => {
-    warmupRender().then(() => {
-      loadProducts();
-      load();
-    });
-  }, [loadProducts, load, warmupRender]);
+    loadProducts();
+  }, [loadProducts]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, filterCategory, filterBrand, filterModel]);
+  }, [debouncedSearch, filterCategory, filterBrand, filterModel]);
 
-  const paginatedProducts = useMemo(() => {
-    const start = (page - 1) * PRODUCTS_PER_PAGE;
-    return filteredByCategoryBrandModel.slice(start, start + PRODUCTS_PER_PAGE);
-  }, [filteredByCategoryBrandModel, page]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const results = await Promise.allSettled([
+          apiGet<Option[]>("/categories"),
+          apiGet<Option[]>("/brands"),
+          apiGet<Option[]>("/models"),
+          apiGet<Option[]>("/years"),
+        ]);
+        if (results[0].status === "fulfilled") setCategories(results[0].value || []);
+        if (results[1].status === "fulfilled") setBrands(results[1].value || []);
+        if (results[2].status === "fulfilled") setModels(results[2].value || []);
+        if (results[3].status === "fulfilled") setYears(results[3].value || []);
+      } catch (err) {
+        console.error("Failed to load options:", err);
+      }
+    })();
+  }, []);
+
+  const clearSearch = () => setSearchQuery("");
 
   const exportCsv = async () => {
     try {
@@ -407,7 +384,7 @@ export default function AdminProductsPage() {
     <div className="space-y-6 text-foreground">
       <PageHeader
         title="Products"
-        subtitle={`${filteredByCategoryBrandModel.length} products found`}
+        subtitle={`${total} products found`}
         meta={lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : undefined}
         actions={
           <div className="flex flex-wrap gap-2">
@@ -469,8 +446,8 @@ export default function AdminProductsPage() {
           </Button>
         </div>
         <div className="text-sm text-muted-foreground">
-          Showing <span className="font-semibold text-foreground">{paginatedProducts.length}</span> of{" "}
-          <span className="font-semibold text-foreground">{filteredByCategoryBrandModel.length}</span> products
+          Showing <span className="font-semibold text-foreground">{products.length}</span> of{" "}
+          <span className="font-semibold text-foreground">{total}</span> products
         </div>
 
         {showFilters && (
@@ -525,7 +502,7 @@ export default function AdminProductsPage() {
             ))}
           </div>
         </div>
-      ) : filteredByCategoryBrandModel.length === 0 ? (
+      ) : products.length === 0 ? (
         <Card className="p-12">
           <EmptyState
             title="No products found"
@@ -541,7 +518,7 @@ export default function AdminProductsPage() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {paginatedProducts.map((p, index) => {
+            {products.map((p, index) => {
               const imgSrc = p.model_id ? p.models?.image_url : p.image_url;
               return (
                 <Card
