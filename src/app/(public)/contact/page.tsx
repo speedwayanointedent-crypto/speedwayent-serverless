@@ -45,7 +45,7 @@ type Settings = {
 const FALLBACK: Required<Settings> = {
   business_name: "Speedway Anointed Ent",
   support_email: "info@speedway.com",
-  support_phone: "+233 XX XXX XXXX",
+  support_phone: "+233 55 090 5060",
   address: "Abossey-Okai, Main Street",
   city: "Accra, Ghana",
   facebook_url: "",
@@ -221,7 +221,7 @@ export default function ContactPage() {
                   <Input
                     label="Phone Number"
                     type="tel"
-                    placeholder="+233 50 000 0000"
+                    placeholder="+233 55 090 5060"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   />

@@ -668,7 +668,7 @@ export default function LandingPage() {
                     {[
                       { icon: MapPin, text: "Abossey-Okai, Accra, Ghana" },
                       { icon: Clock, text: "Mon - Sat, 8:00am - 6:00pm" },
-                      { icon: Phone, text: "+233 XX XXX XXXX" },
+                      { icon: Phone, text: "+233 55 090 5060" },
                       { icon: Mail, text: "info@speedway.com" },
                     ].map(({ icon: Icon, text }) => (
                       <div key={text} className="flex items-start gap-3">

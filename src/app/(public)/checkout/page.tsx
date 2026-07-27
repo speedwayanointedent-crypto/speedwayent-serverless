@@ -201,7 +201,7 @@ function CheckoutInner() {
                           value={formData.phone}
                           onChange={handleInputChange}
                           className="w-full h-12 pl-12 pr-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                          placeholder="+233 XX XXX XXXX"
+                          placeholder="+233 55 090 5060"
                         />
                       </div>
                     </div>

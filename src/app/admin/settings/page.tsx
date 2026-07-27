@@ -246,7 +246,7 @@ export default function AdminSettingsPage() {
               />
               <Field
                 icon={Phone}
-                placeholder="Support phone (e.g. +233 50 000 0000)"
+                placeholder="Support phone (e.g. +233 55 090 5060)"
                 value={form.support_phone}
                 onChange={updateField("support_phone")}
                 disabled={loading || saving}
@@ -377,7 +377,7 @@ export default function AdminSettingsPage() {
               />
               <Field
                 icon={Globe}
-                placeholder="WhatsApp link (e.g. https://wa.me/233240000000)"
+                placeholder="WhatsApp link (e.g. https://wa.me/233550905060)"
                 value={form.whatsapp_url}
                 onChange={updateField("whatsapp_url")}
                 disabled={loading || saving}
